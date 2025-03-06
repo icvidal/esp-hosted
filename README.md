@@ -24,3 +24,30 @@ The original platform showing the issue is our custom device. For collaboration 
 
  * SPI = SPI2
 
+ TODO: Configure SDK
+
+
+## Setup
+Setup IDF with [TODO]
+```
+cd espo_hosted_ng/esp_esp_driver
+cmake -B build
+```
+
+To be continued
+
+## How to reproduce
+
+```
+cd esp_hosted_ng/esp/esp_driver/network_adapter
+. ../esp-idf/export.sh
+idf.py set-target esp32s3
+idf.py build
+idf.py flash
+```
+
+Running `idf.py monitor` verify the ESP32 boots and by touching the GPIOs (TODO: Describe which ones) the message "Touch Slider Example: Slider Calculate, position: XX" is printed.
+
+After flashing, connect the SPI bus as described in the table above and boot the Raspberry Pi, and ESP32.
+Once the Raspberry Pi boots, load esp32_hosted_ng
+
