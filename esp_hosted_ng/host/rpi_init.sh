@@ -18,9 +18,9 @@
 RESETPIN=""
 BT_INIT_SET="0"
 RAW_TP_MODE="0"
-IF_TYPE="spi"
+IF_TYPE="sdio"
 MODULE_NAME="esp32_${IF_TYPE}.ko"
-RPI_RESETPIN=6
+RPI_RESETPIN=518
 OTA_FILE=""
 
 bringup_network_interface()
