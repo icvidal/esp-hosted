@@ -56,26 +56,20 @@
 #include "esp_log.h"
 
 static const char *TAG_Slider = "Touch Slider Example";
-#define TOUCH_SLIDER_CHANNEL_NUM     6
+#define TOUCH_SLIDER_CHANNEL_NUM     3
 
 static touch_slider_handle_t slider_handle; //Touch slider handle
 
 static const touch_pad_t channel_array[] = {
-    TOUCH_PAD_NUM2,
-    TOUCH_PAD_NUM3,
-    TOUCH_PAD_NUM4,
     TOUCH_PAD_NUM5,
     TOUCH_PAD_NUM6,
-    TOUCH_PAD_NUM7
+    TOUCH_PAD_NUM7,
 };
 
 static const float channel_sens_array[] = {
     0.015,
     0.015,
     0.015,
-    0.015,
-    0.015,
-    0.015
 };
 
 
