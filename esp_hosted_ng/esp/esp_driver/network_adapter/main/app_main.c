@@ -109,11 +109,11 @@ void slider_handler(touch_slider_handle_t out_handle, touch_slider_message_t *ou
         return;
     }
     if (out_message->event == TOUCH_SLIDER_EVT_ON_PRESS) {
-        ESP_LOGI(TAG_Slider, "Slider Press, position: %"PRIu32, out_message->position);
+        //ESP_EARLY_LOGI(TAG_Slider, "Slider Press, position: %"PRIu32, out_message->position);
     } else if (out_message->event == TOUCH_SLIDER_EVT_ON_RELEASE) {
-        ESP_LOGI(TAG_Slider, "Slider Release, position: %"PRIu32, out_message->position);
+        //ESP_EARLY_LOGI(TAG_Slider, "Slider Release, position: %"PRIu32, out_message->position);
     } else if (out_message->event == TOUCH_SLIDER_EVT_ON_CALCULATION) {
-        ESP_LOGI(TAG_Slider, "Slider Calculate, position: %"PRIu32, out_message->position);
+        //ESP_EARLY_LOGI(TAG_Slider, "Slider Calculate, position: %"PRIu32, out_message->position);
     }
 }
 #endif
@@ -231,7 +231,7 @@ uint8_t is_wakeup_needed(interface_buffer_handle_t *buf_handle)
 		return 0;
 	}
 
-	//TODO #define ETH_P_ARP	0x0806 
+	//TODO #define ETH_P_ARP	0x0806
 	//TODO Add Macros for below magic numbers
 	if (buf_handle->payload_len >= 42) {
 		pos = buf_start + 12;
@@ -739,6 +739,43 @@ static void set_gpio_cd_pin(void)
 #endif
 }
 
+static void touch_slider_init_task(void *pvParameters) {
+	/* Initialize Touch Element library */
+	touch_elem_global_config_t global_config = TOUCH_ELEM_GLOBAL_DEFAULT_CONFIG();
+	ESP_ERROR_CHECK(touch_element_install(&global_config));
+	ESP_LOGI(TAG_Slider, "Touch element library installed");
+
+	touch_slider_global_config_t slider_global_config = TOUCH_SLIDER_GLOBAL_DEFAULT_CONFIG();
+	ESP_ERROR_CHECK(touch_slider_install(&slider_global_config));
+	ESP_LOGI(TAG_Slider, "Touch slider installed");
+
+	/* Create Touch slider */
+	touch_slider_config_t slider_config = {
+		.channel_array = channel_array,
+		.sensitivity_array = channel_sens_array,
+		.channel_num = (sizeof(channel_array) / sizeof(channel_array[0])),
+		.position_range = 101
+	};
+	ESP_ERROR_CHECK(touch_slider_create(&slider_config, &slider_handle));
+
+	ESP_ERROR_CHECK(touch_slider_subscribe_event(slider_handle,
+				TOUCH_ELEM_EVENT_ON_PRESS | TOUCH_ELEM_EVENT_ON_RELEASE | TOUCH_ELEM_EVENT_ON_CALCULATION, NULL));
+
+#ifdef CONFIG_TOUCH_ELEM_EVENT
+	ESP_ERROR_CHECK(touch_slider_set_dispatch_method(slider_handle, TOUCH_ELEM_DISP_EVENT));
+	xTaskCreate(&slider_handler_task, "slider_handler_task", 4 * 1024, NULL, 5, NULL);
+#elif CONFIG_TOUCH_ELEM_CALLBACK
+	ESP_ERROR_CHECK(touch_slider_set_dispatch_method(slider_handle, TOUCH_ELEM_DISP_CALLBACK));
+	ESP_ERROR_CHECK(touch_slider_set_callback(slider_handle, slider_handler));
+#endif
+
+	ESP_LOGI(TAG_Slider, "Touch slider created");
+	touch_element_start();
+	ESP_LOGI(TAG_Slider, "Touch element library start");
+
+	vTaskDelete(NULL);
+}
+
 void app_main()
 {
 	esp_err_t ret;
@@ -820,37 +857,6 @@ void app_main()
 	debug_set_wifi_logging();
 	ESP_LOGI(TAG,"Initial set up done");
 
-  /* Initialize Touch Element library */
-  touch_elem_global_config_t global_config = TOUCH_ELEM_GLOBAL_DEFAULT_CONFIG();
-  ESP_ERROR_CHECK(touch_element_install(&global_config));
-  ESP_LOGI(TAG_Slider, "Touch element library installed");
-
-  touch_slider_global_config_t slider_global_config = TOUCH_SLIDER_GLOBAL_DEFAULT_CONFIG();
-  ESP_ERROR_CHECK(touch_slider_install(&slider_global_config));
-  ESP_LOGI(TAG_Slider, "Touch slider installed");
-  /* Create Touch slider */
-  touch_slider_config_t slider_config = {
-      .channel_array = channel_array,
-      .sensitivity_array = channel_sens_array,
-      .channel_num = (sizeof(channel_array) / sizeof(channel_array[0])),
-      .position_range = 101
-  };
-  ESP_ERROR_CHECK(touch_slider_create(&slider_config, &slider_handle));
-  /* Subscribe touch slider events (On Press, On Release, On Calculation) */
-  ESP_ERROR_CHECK(touch_slider_subscribe_event(slider_handle,
-                                                 TOUCH_ELEM_EVENT_ON_PRESS | TOUCH_ELEM_EVENT_ON_RELEASE | TOUCH_ELEM_EVENT_ON_CALCULATION, NULL));
-#ifdef CONFIG_TOUCH_ELEM_EVENT
-    /* Set EVENT as the dispatch method */
-    ESP_ERROR_CHECK(touch_slider_set_dispatch_method(slider_handle, TOUCH_ELEM_DISP_EVENT));
-    /* Create a handler task to handle event messages */
-    xTaskCreate(&slider_handler_task, "slider_handler_task", 4 * 1024, NULL, 5, NULL);
-#elif CONFIG_TOUCH_ELEM_CALLBACK
-    /* Set CALLBACK as the dispatch method */
-    ESP_ERROR_CHECK(touch_slider_set_dispatch_method(slider_handle, TOUCH_ELEM_DISP_CALLBACK));
-    /* Register a handler function to handle event messages */
-    ESP_ERROR_CHECK(touch_slider_set_callback(slider_handle, slider_handler));
-#endif
-  ESP_LOGI(TAG_Slider, "Touch slider created");
-  touch_element_start();
-  ESP_LOGI(TAG_Slider, "Touch element library start");
+	/* Create touch slider initialization task */
+	xTaskCreate(touch_slider_init_task, "touch_init", 4 * 1024, NULL, 3, NULL);
 }
